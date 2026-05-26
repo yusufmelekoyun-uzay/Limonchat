@@ -8,10 +8,11 @@
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0">
 
-<title>Limonchat 🐤🍋</title>
+<title>Limonchat</title>
 
-<!-- MEDIAPIPE -->
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.1/face_mesh.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
 
 <style>
 
@@ -69,12 +70,6 @@ border-radius:28px;
 
 }
 
-video{
-
-transform:scaleX(-1);
-
-}
-
 canvas{
 
 position:absolute;
@@ -85,18 +80,17 @@ top:10px;
 width:calc(100% - 20px);
 height:calc(100% - 20px);
 
-pointer-events:none;
-
 }
 
 button{
 
 margin-top:4px;
+
 margin-bottom:8px;
 
-padding:10px 28px;
+padding:14px 45px;
 
-font-size:24px;
+font-size:34px;
 font-weight:bold;
 
 background:
@@ -109,8 +103,6 @@ orange
 border:none;
 
 border-radius:22px;
-
-color:black;
 
 box-shadow:
 0 0 30px rgba(255,255,0,0.5);
@@ -146,8 +138,7 @@ margin-bottom:10px;
 <video
 id="video"
 autoplay
-playsinline
-muted>
+playsinline>
 </video>
 
 <canvas id="canvas"></canvas>
@@ -157,12 +148,6 @@ muted>
 <button id="btn">
 
 ÇEK 📸
-
-</button>
-
-<button id="switchCam">
-
-🔄
 
 </button>
 
@@ -180,7 +165,7 @@ id="log">
 
 </div>
 
-<script type="module">
+<script>
 
 const video =
 document.getElementById("video");
@@ -211,12 +196,11 @@ birdSound.volume =
 
 
 
-// SES AKTİF
+// SES İZNİ
 
 document.body.onclick = ()=>{
 
-birdSound.play()
-.catch(()=>{});
+birdSound.play();
 
 birdSound.pause();
 
@@ -244,6 +228,8 @@ limon.onload = ()=>{
 
 kusHazir = true;
 
+console.log("🐤 Kuş yüklendi");
+
 log.innerHTML =
 "🐤 Kuş yüklendi";
 
@@ -263,94 +249,29 @@ log.innerHTML =
 limon.src =
 "28630-removebg-preview.png";
 
-console.log(limon.src);
-
-await limon.decode()
-.catch(()=>{});
-
 
 
 
 
 // KAMERA
 
-let currentCamera = "user";
-
-let stream;
-
-
-
-async function startCamera(){
-
-
-
-if(stream){
-
-stream.getTracks().forEach(track=>{
-
-track.stop();
-
-});
-
-}
-
-
-
-stream =
-
-await navigator.mediaDevices
+navigator.mediaDevices
 .getUserMedia({
 
-video:{
+video:true,
+audio:true
 
-facingMode:
-currentCamera,
+})
 
-width:{
-ideal:640
-},
-
-height:{
-ideal:480
-}
-
-},
-
-audio:false
-
-});
-
-
+.then((stream)=>{
 
 video.srcObject =
 stream;
 
-
-
-await new Promise(resolve=>{
-
-video.onloadedmetadata = ()=>{
-
-resolve();
-
-};
-
-});
-
-
-
-await video.play();
-
-
-
 log.innerHTML =
 "📸 Kamera açıldı";
 
-}
-
-
-
-await startCamera()
+})
 
 .catch(()=>{
 
@@ -370,8 +291,7 @@ new FaceMesh({
 
 locateFile:(file)=>{
 
-return
-`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.1/${file}`;
+return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
 
 }
 
@@ -381,13 +301,13 @@ return
 
 faceMesh.setOptions({
 
-maxNumFaces:2,
+maxNumFaces:1,
 
-refineLandmarks:false,
+refineLandmarks:true,
 
-minDetectionConfidence:0.1,
+minDetectionConfidence:0.5,
 
-minTrackingConfidence:0.1
+minTrackingConfidence:0.5
 
 });
 
@@ -399,37 +319,26 @@ faceMesh.onResults(onResults);
 
 
 
-// FACE LOOP
+// CAMERA
 
-async function faceLoop(){
+const camera =
+new Camera(video,{
 
-while(true){
-
-if(video.readyState >= 2){
-
-console.log("frame");
+onFrame: async ()=>{
 
 await faceMesh.send({
 image:video
 });
 
-}
+},
 
+width:640,
 
-
-await new Promise(resolve=>{
-
-requestAnimationFrame(resolve);
+height:480
 
 });
 
-}
-
-}
-
-
-
-faceLoop();
+camera.start();
 
 
 
@@ -452,37 +361,23 @@ canvas.width,
 canvas.height
 );
 
-
-
-
-
-// VIDEO ÇİZ
-
-if(video.readyState >= 2){
-
 ctx.drawImage(
-video,
+
+results.image,
+
 0,
 0,
+
 canvas.width,
 canvas.height
+
 );
 
-}
 
 
 
 
-
-// YÜZ ALGILAMA
-
-if(
-results.multiFaceLandmarks &&
-results.multiFaceLandmarks.length > 0
-){
-
-log.innerHTML =
-"😄 Yüz algılandı";
+if(results.multiFaceLandmarks.length > 0){
 
 const face =
 results.multiFaceLandmarks[0];
@@ -493,14 +388,14 @@ results.multiFaceLandmarks[0];
 
 // YÜZ
 
-const center =
+const faceCenter =
 face[1];
 
 const fx =
-center.x * canvas.width;
+faceCenter.x * canvas.width;
 
 const fy =
-center.y * canvas.height;
+faceCenter.y * canvas.height;
 
 
 
@@ -526,15 +421,179 @@ ctx.beginPath();
 ctx.ellipse(
 
 fx,
-fy,
+fy + 5,
 
 faceSize * 0.42,
 faceSize * 0.58,
 
 0,
-0,
-Math.PI*2
 
+0,
+Math.PI * 2
+
+);
+
+ctx.fill();
+
+
+
+
+
+// YAN ÇİZGİLER
+
+ctx.strokeStyle =
+"rgba(0,0,0,0.22)";
+
+ctx.lineWidth =
+3;
+
+
+
+for(let i = 0; i < 5; i++){
+
+ctx.beginPath();
+
+ctx.moveTo(
+
+fx - faceSize * 0.16,
+
+fy - faceSize * 0.08 + i * faceSize * 0.05
+
+);
+
+ctx.lineTo(
+
+fx - faceSize * 0.35,
+
+fy - faceSize * 0.12 + i * faceSize * 0.03
+
+);
+
+ctx.stroke();
+
+}
+
+
+
+
+
+for(let i = 0; i < 5; i++){
+
+ctx.beginPath();
+
+ctx.moveTo(
+
+fx + faceSize * 0.16,
+
+fy - faceSize * 0.08 + i * faceSize * 0.05
+
+);
+
+ctx.lineTo(
+
+fx + faceSize * 0.35,
+
+fy - faceSize * 0.12 + i * faceSize * 0.03
+
+);
+
+ctx.stroke();
+
+}
+
+
+
+
+
+// ALIN ÇİZGİLERİ
+
+for(let i = 0; i < 4; i++){
+
+ctx.beginPath();
+
+ctx.moveTo(
+
+fx - faceSize * 0.12 + i * faceSize * 0.08,
+
+fy - faceSize * 0.42
+
+);
+
+ctx.lineTo(
+
+fx - faceSize * 0.08 + i * faceSize * 0.08,
+
+fy - faceSize * 0.18
+
+);
+
+ctx.stroke();
+
+}
+
+
+
+
+
+// GAGA
+
+const nose =
+face[1];
+
+const nx =
+nose.x * canvas.width;
+
+const ny =
+nose.y * canvas.height;
+
+
+
+ctx.fillStyle =
+"#d89b2b";
+
+ctx.beginPath();
+
+ctx.moveTo(
+nx - 25,
+ny
+);
+
+ctx.quadraticCurveTo(
+nx,
+ny - 35,
+nx + 25,
+ny
+);
+
+ctx.quadraticCurveTo(
+nx,
+ny + 20,
+nx - 25,
+ny
+);
+
+ctx.fill();
+
+
+
+ctx.fillStyle =
+"#8a5a10";
+
+ctx.beginPath();
+
+ctx.moveTo(
+nx - 18,
+ny + 5
+);
+
+ctx.lineTo(
+nx + 18,
+ny + 5
+);
+
+ctx.lineTo(
+nx,
+ny + 40
 );
 
 ctx.fill();
@@ -551,15 +610,11 @@ face[33];
 const rightEye =
 face[263];
 
-
-
 const lx =
 leftEye.x * canvas.width + 10;
 
 const ly =
 leftEye.y * canvas.height;
-
-
 
 const rx =
 rightEye.x * canvas.width - 10;
@@ -633,49 +688,6 @@ ctx.fill();
 
 
 
-// GAGA
-
-const nose =
-face[1];
-
-const nx =
-nose.x * canvas.width;
-
-const ny =
-nose.y * canvas.height;
-
-
-
-ctx.fillStyle =
-"#d89b2b";
-
-ctx.beginPath();
-
-ctx.moveTo(
-nx - 25,
-ny
-);
-
-ctx.quadraticCurveTo(
-nx,
-ny - 35,
-nx + 25,
-ny
-);
-
-ctx.quadraticCurveTo(
-nx,
-ny + 20,
-nx - 25,
-ny
-);
-
-ctx.fill();
-
-
-
-
-
 // AĞIZ
 
 const upperLip =
@@ -700,18 +712,26 @@ if(mouthOpen > 0.03){
 
 if(birdSound.paused){
 
+birdSound.volume = 1;
+
 birdSound.currentTime = 0;
 
-birdSound.play()
-.catch(()=>{});
+birdSound.play().catch(()=>{});
+
+log.innerHTML =
+"🐤 Cik cik cik 🔊";
 
 }
 
 }else{
 
+if(!birdSound.paused){
+
 birdSound.pause();
 
 birdSound.currentTime = 0;
+
+}
 
 }
 
@@ -732,14 +752,49 @@ shoulder.y * canvas.height + 85;
 
 
 
+if(sx < 0){
 
+sx = 50;
+
+}
+
+if(sx > canvas.width){
+
+sx = canvas.width - 50;
+
+}
+
+
+
+if(sy < 0){
+
+sy = 50;
+
+}
+
+if(sy > canvas.height){
+
+sy = canvas.height - 50;
+
+}
+
+
+
+
+
+if(
+
+sx > -100 &&
+sx < canvas.width + 100 &&
+sy > -100 &&
+sy < canvas.height + 100
+
+){
 
 if(kusHazir){
 
 log.innerHTML =
 "🐤 Kuş görünüyor";
-
-try{
 
 ctx.drawImage(
 
@@ -753,26 +808,14 @@ sy - 75,
 
 );
 
-}catch(e){
-
-console.log(e);
-
-log.innerHTML =
-"❌ Kuş çizilemedi";
-
 }
 
 }else{
 
 log.innerHTML =
-"😭 Kuş yüklenmedi";
+"❌ Kuş görünmüyor";
 
 }
-
-}else{
-
-log.innerHTML =
-"😭 Yüz algılanamadı";
 
 }
 
@@ -782,7 +825,7 @@ log.innerHTML =
 
 
 
-// FOTO ÇEK
+// FOTOĞRAF
 
 document
 .getElementById("btn")
@@ -799,36 +842,8 @@ a.download =
 
 a.click();
 
-};
-
-
-
-
-
-// KAMERA DEĞİŞTİR
-
-document
-.getElementById("switchCam")
-.onclick = async ()=>{
-
-if(currentCamera === "user"){
-
-currentCamera = "environment";
-
-}else{
-
-currentCamera = "user";
-
-}
-
-
-
 log.innerHTML =
-"🔄 Kamera değiştiriliyor...";
-
-
-
-await startCamera();
+"📸 Fotoğraf kaydedildi";
 
 };
 
@@ -837,4 +852,3 @@ await startCamera();
 </body>
 
 </html>
- 
