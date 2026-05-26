@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Limonchat 🐤🍋</title>
+
+<!-- MEDIAPIPE -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.1/face_mesh.js"></script>
+
+<style>
+
+body{
+
+margin:0;
+background:#111;
+font-family:Arial;
+text-align:center;
+color:white;
+overflow:hidden;
+
+}
+
+h1{
+
+font-size:52px;
+margin-top:15px;
+margin-bottom:8px;
+
+text-shadow:
+0 0 25px yellow;
+
+}
+
+.container{
+
+position:relative;
+
+width:92%;
+max-width:520px;
+
+margin:auto;
+
+padding:10px;
+
+border-radius:35px;
+
+background:
+rgba(255,255,255,0.05);
+
+border:
+2px solid rgba(255,255,0,0.2);
+
+box-shadow:
+0 0 35px rgba(255,255,0,0.2);
+
+}
+
+video,
+canvas{
+
+width:100%;
+border-radius:28px;
+
+}
+
+video{
+
+transform:scaleX(-1);
+
+}
+
+canvas{
+
+position:absolute;
+
+left:10px;
+top:10px;
+
+width:calc(100% - 20px);
+height:calc(100% - 20px);
+
+pointer-events:none;
+
+}
+
+button{
+
+margin-top:4px;
+margin-bottom:8px;
+
+padding:10px 28px;
+
+font-size:24px;
+font-weight:bold;
+
+background:
+linear-gradient(
+45deg,
+yellow,
+orange
+);
+
+border:none;
+
+border-radius:22px;
+
+color:black;
+
+box-shadow:
+0 0 30px rgba(255,255,0,0.5);
+
+}
+
+.info{
+
+margin-top:10px;
+margin-bottom:14px;
+
+opacity:0.8;
+
+}
+
+.log{
+
+font-size:18px;
+margin-bottom:10px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Limonchat 🐤🍋</h1>
+
+<div class="container">
+
+<video
+id="video"
+autoplay
+playsinline
+muted>
+</video>
+
+<canvas id="canvas"></canvas>
+
+</div>
+
+<button id="btn">
+
+ÇEK 📸
+
+</button>
+
+<button id="switchCam">
+
+🔄
+
+</button>
+
+<div class="info">
+
+🐤 Ağzını açınca kuş sesi çıkar 🍋
+
+</div>
+
+<div
+class="log"
+id="log">
+
+🐤 Başlatılıyor...
+
+</div>
+
+<script type="module">
+
+const video =
+document.getElementById("video");
+
+const canvas =
+document.getElementById("canvas");
+
+const ctx =
+canvas.getContext("2d");
+
+const log =
+document.getElementById("log");
+
+
+
+// KUŞ SESİ
+
+const birdSound =
+new Audio("bird.mp3");
+
+birdSound.preload =
+"auto";
+
+birdSound.volume =
+1;
+
+
+
+
+
+// SES AKTİF
+
+document.body.onclick = ()=>{
+
+birdSound.play()
+.catch(()=>{});
+
+birdSound.pause();
+
+birdSound.currentTime = 0;
+
+log.innerHTML =
+"🔊 Ses aktif";
+
+};
+
+
+
+
+
+// KUŞ FOTO
+
+const limon =
+new Image();
+
+let kusHazir = false;
+
+
+
+limon.onload = ()=>{
+
+kusHazir = true;
+
+log.innerHTML =
+"🐤 Kuş yüklendi";
+
+};
+
+
+
+limon.onerror = ()=>{
+
+log.innerHTML =
+"❌ Kuş resmi bulunamadı";
+
+};
+
+
+
+limon.src =
+"28630-removebg-preview.png";
+
+console.log(limon.src);
+
+await limon.decode()
+.catch(()=>{});
+
+
+
+
+
+// KAMERA
+
+let currentCamera = "user";
+
+let stream;
+
+
+
+async function startCamera(){
+
+
+
+if(stream){
+
+stream.getTracks().forEach(track=>{
+
+track.stop();
+
+});
+
+}
+
+
+
+stream =
+
+await navigator.mediaDevices
+.getUserMedia({
+
+video:{
+
+facingMode:
+currentCamera,
+
+width:{
+ideal:640
+},
+
+height:{
+ideal:480
+}
+
+},
+
+audio:false
+
+});
+
+
+
+video.srcObject =
+stream;
+
+
+
+await new Promise(resolve=>{
+
+video.onloadedmetadata = ()=>{
+
+resolve();
+
+};
+
+});
+
+
+
+await video.play();
+
+
+
+log.innerHTML =
+"📸 Kamera açıldı";
+
+}
+
+
+
+await startCamera()
+
+.catch(()=>{
+
+log.innerHTML =
+"❌ Kamera açılamadı";
+
+});
+
+
+
+
+
+// FACEMESH
+
+const faceMesh =
+new FaceMesh({
+
+locateFile:(file)=>{
+
+return
+`https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.1/${file}`;
+
+}
+
+});
+
+
+
+faceMesh.setOptions({
+
+maxNumFaces:2,
+
+refineLandmarks:false,
+
+minDetectionConfidence:0.1,
+
+minTrackingConfidence:0.1
+
+});
+
+
+
+faceMesh.onResults(onResults);
+
+
+
+
+
+// FACE LOOP
+
+async function faceLoop(){
+
+while(true){
+
+if(video.readyState >= 2){
+
+console.log("frame");
+
+await faceMesh.send({
+image:video
+});
+
+}
+
+
+
+await new Promise(resolve=>{
+
+requestAnimationFrame(resolve);
+
+});
+
+}
+
+}
+
+
+
+faceLoop();
+
+
+
+
+
+
+
+function onResults(results){
+
+canvas.width =
+video.videoWidth;
+
+canvas.height =
+video.videoHeight;
+
+ctx.clearRect(
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+
+
+
+
+// VIDEO ÇİZ
+
+if(video.readyState >= 2){
+
+ctx.drawImage(
+video,
+0,
+0,
+canvas.width,
+canvas.height
+);
+
+}
+
+
+
+
+
+// YÜZ ALGILAMA
+
+if(
+results.multiFaceLandmarks &&
+results.multiFaceLandmarks.length > 0
+){
+
+log.innerHTML =
+"😄 Yüz algılandı";
+
+const face =
+results.multiFaceLandmarks[0];
+
+
+
+
+
+// YÜZ
+
+const center =
+face[1];
+
+const fx =
+center.x * canvas.width;
+
+const fy =
+center.y * canvas.height;
+
+
+
+const faceSize =
+
+Math.abs(
+face[10].y - face[152].y
+)
+
+* canvas.height;
+
+
+
+
+
+// SARI YÜZ
+
+ctx.fillStyle =
+"rgba(255,230,0,0.40)";
+
+ctx.beginPath();
+
+ctx.ellipse(
+
+fx,
+fy,
+
+faceSize * 0.42,
+faceSize * 0.58,
+
+0,
+0,
+Math.PI*2
+
+);
+
+ctx.fill();
+
+
+
+
+
+// GÖZLER
+
+const leftEye =
+face[33];
+
+const rightEye =
+face[263];
+
+
+
+const lx =
+leftEye.x * canvas.width + 10;
+
+const ly =
+leftEye.y * canvas.height;
+
+
+
+const rx =
+rightEye.x * canvas.width - 10;
+
+const ry =
+rightEye.y * canvas.height;
+
+
+
+ctx.fillStyle =
+"white";
+
+ctx.beginPath();
+
+ctx.arc(
+lx,
+ly,
+24,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+
+
+ctx.beginPath();
+
+ctx.arc(
+rx,
+ry,
+24,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+
+
+ctx.fillStyle =
+"black";
+
+ctx.beginPath();
+
+ctx.arc(
+lx,
+ly,
+18,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+
+
+ctx.beginPath();
+
+ctx.arc(
+rx,
+ry,
+18,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+
+
+
+
+// GAGA
+
+const nose =
+face[1];
+
+const nx =
+nose.x * canvas.width;
+
+const ny =
+nose.y * canvas.height;
+
+
+
+ctx.fillStyle =
+"#d89b2b";
+
+ctx.beginPath();
+
+ctx.moveTo(
+nx - 25,
+ny
+);
+
+ctx.quadraticCurveTo(
+nx,
+ny - 35,
+nx + 25,
+ny
+);
+
+ctx.quadraticCurveTo(
+nx,
+ny + 20,
+nx - 25,
+ny
+);
+
+ctx.fill();
+
+
+
+
+
+// AĞIZ
+
+const upperLip =
+face[13];
+
+const lowerLip =
+face[14];
+
+const mouthOpen =
+
+Math.abs(
+upperLip.y - lowerLip.y
+);
+
+
+
+
+
+// KUŞ SESİ
+
+if(mouthOpen > 0.03){
+
+if(birdSound.paused){
+
+birdSound.currentTime = 0;
+
+birdSound.play()
+.catch(()=>{});
+
+}
+
+}else{
+
+birdSound.pause();
+
+birdSound.currentTime = 0;
+
+}
+
+
+
+
+
+// OMUZ KUŞU
+
+const shoulder =
+face[454];
+
+let sx =
+shoulder.x * canvas.width + 40;
+
+let sy =
+shoulder.y * canvas.height + 85;
+
+
+
+
+
+if(kusHazir){
+
+log.innerHTML =
+"🐤 Kuş görünüyor";
+
+try{
+
+ctx.drawImage(
+
+limon,
+
+sx - 40,
+sy - 75,
+
+125,
+125
+
+);
+
+}catch(e){
+
+console.log(e);
+
+log.innerHTML =
+"❌ Kuş çizilemedi";
+
+}
+
+}else{
+
+log.innerHTML =
+"😭 Kuş yüklenmedi";
+
+}
+
+}else{
+
+log.innerHTML =
+"😭 Yüz algılanamadı";
+
+}
+
+}
+
+
+
+
+
+// FOTO ÇEK
+
+document
+.getElementById("btn")
+.onclick = ()=>{
+
+const a =
+document.createElement("a");
+
+a.href =
+canvas.toDataURL();
+
+a.download =
+"limonchat.png";
+
+a.click();
+
+};
+
+
+
+
+
+// KAMERA DEĞİŞTİR
+
+document
+.getElementById("switchCam")
+.onclick = async ()=>{
+
+if(currentCamera === "user"){
+
+currentCamera = "environment";
+
+}else{
+
+currentCamera = "user";
+
+}
+
+
+
+log.innerHTML =
+"🔄 Kamera değiştiriliyor...";
+
+
+
+await startCamera();
+
+};
+
+</script>
+
+</body>
+
+</html>
