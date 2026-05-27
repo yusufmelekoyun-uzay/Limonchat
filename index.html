@@ -12,8 +12,6 @@ content="width=device-width, initial-scale=1.0">
 
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
-
 <style>
 
 body{
@@ -70,6 +68,12 @@ border-radius:28px;
 
 }
 
+video{
+
+display:block;
+
+}
+
 canvas{
 
 position:absolute;
@@ -80,38 +84,87 @@ top:10px;
 width:calc(100% - 20px);
 height:calc(100% - 20px);
 
+pointer-events:none;
+
 }
 
-button{
 
-margin-top:4px;
 
-margin-bottom:8px;
+/* SNAPCHAT BUTONU */
 
-padding:14px 45px;
+#btn{
 
-font-size:34px;
-font-weight:bold;
+position:absolute;
+
+left:50%;
+bottom:18px;
+
+transform:translateX(-50%);
+
+z-index:50;
+
+width:82px;
+height:82px;
+
+border-radius:50%;
+
+border:
+6px solid white;
 
 background:
-linear-gradient(
-45deg,
-yellow,
-orange
-);
+rgba(255,255,255,0.15);
 
-border:none;
+backdrop-filter:blur(5px);
 
-border-radius:22px;
+font-size:0;
 
 box-shadow:
-0 0 30px rgba(255,255,0,0.5);
+0 0 18px rgba(255,255,255,0.6);
 
 }
+
+
+
+/* KAMERA DEĞİŞTİR */
+
+#switchCam{
+
+position:absolute;
+
+top:18px;
+right:18px;
+
+z-index:60;
+
+width:62px;
+height:62px;
+
+border-radius:50%;
+
+border:
+4px solid white;
+
+background:
+rgba(255,255,255,0.15);
+
+backdrop-filter:blur(5px);
+
+font-size:28px;
+
+color:white;
+
+box-shadow:
+0 0 18px rgba(255,255,255,0.4);
+
+}
+
+
+
+/* YAZILAR */
 
 .info{
 
-margin-top:10px;
+margin-top:85px;
 margin-bottom:14px;
 
 opacity:0.8;
@@ -138,18 +191,21 @@ margin-bottom:10px;
 <video
 id="video"
 autoplay
-playsinline>
+playsinline
+muted>
 </video>
 
 <canvas id="canvas"></canvas>
 
-</div>
+<button id="btn"></button>
 
-<button id="btn">
+<button id="switchCam">
 
-ÇEK 📸
+🔄
 
 </button>
+
+</div>
 
 <div class="info">
 
@@ -184,7 +240,7 @@ document.getElementById("log");
 // KUŞ SESİ
 
 const birdSound =
-new Audio("freesound_community-cardinal-37075.mp3");
+new Audio("bird.mp3");
 
 birdSound.preload =
 "auto";
@@ -196,11 +252,13 @@ birdSound.volume =
 
 
 
-// SES İZNİ
+// SES AKTİF
 
-document.body.onclick = ()=>{
+document.body.onclick = async ()=>{
 
-birdSound.play();
+try{
+
+await birdSound.play();
 
 birdSound.pause();
 
@@ -208,6 +266,8 @@ birdSound.currentTime = 0;
 
 log.innerHTML =
 "🔊 Ses aktif";
+
+}catch(e){}
 
 };
 
@@ -228,20 +288,6 @@ limon.onload = ()=>{
 
 kusHazir = true;
 
-console.log("🐤 Kuş yüklendi");
-
-log.innerHTML =
-"🐤 Kuş yüklendi";
-
-};
-
-
-
-limon.onerror = ()=>{
-
-log.innerHTML =
-"❌ Kuş resmi bulunamadı";
-
 };
 
 
@@ -255,30 +301,84 @@ limon.src =
 
 // KAMERA
 
-navigator.mediaDevices
-.getUserMedia({
+let currentFacing =
+"user";
 
-video:true,
-audio:true
+let currentStream;
 
-})
 
-.then((stream)=>{
+
+async function startCamera(){
+
+
+
+if(currentStream){
+
+currentStream
+.getTracks()
+.forEach(track=>track.stop());
+
+}
+
+
+
+currentStream =
+
+await navigator.mediaDevices.getUserMedia({
+
+video:{
+facingMode:currentFacing
+},
+
+audio:false
+
+});
+
+
 
 video.srcObject =
-stream;
+currentStream;
+
+
+
+await video.play();
+
+
 
 log.innerHTML =
 "📸 Kamera açıldı";
 
-})
+}
 
-.catch(()=>{
 
-log.innerHTML =
-"❌ Kamera açılamadı";
 
-});
+startCamera();
+
+
+
+
+
+// KAMERA DEĞİŞTİR
+
+async function switchCamera(){
+
+currentFacing =
+
+currentFacing === "user"
+? "environment"
+: "user";
+
+
+
+await startCamera();
+
+}
+
+
+
+document
+.getElementById("switchCam")
+.onclick = switchCamera;
 
 
 
@@ -319,26 +419,31 @@ faceMesh.onResults(onResults);
 
 
 
-// CAMERA
+// SÜREKLİ ÇALIŞ
 
-const camera =
-new Camera(video,{
+async function renderFace(){
 
-onFrame: async ()=>{
+if(video.readyState >= 2){
 
 await faceMesh.send({
 image:video
 });
 
-},
+}
 
-width:640,
 
-height:480
 
-});
+requestAnimationFrame(renderFace);
 
-camera.start();
+}
+
+
+
+video.onloadeddata = ()=>{
+
+renderFace();
+
+};
 
 
 
@@ -472,8 +577,6 @@ fy - faceSize * 0.12 + i * faceSize * 0.03
 ctx.stroke();
 
 }
-
-
 
 
 
@@ -712,8 +815,6 @@ if(mouthOpen > 0.03){
 
 if(birdSound.paused){
 
-birdSound.volume = 1;
-
 birdSound.currentTime = 0;
 
 birdSound.play().catch(()=>{});
@@ -752,49 +853,7 @@ shoulder.y * canvas.height + 85;
 
 
 
-if(sx < 0){
-
-sx = 50;
-
-}
-
-if(sx > canvas.width){
-
-sx = canvas.width - 50;
-
-}
-
-
-
-if(sy < 0){
-
-sy = 50;
-
-}
-
-if(sy > canvas.height){
-
-sy = canvas.height - 50;
-
-}
-
-
-
-
-
-if(
-
-sx > -100 &&
-sx < canvas.width + 100 &&
-sy > -100 &&
-sy < canvas.height + 100
-
-){
-
 if(kusHazir){
-
-log.innerHTML =
-"🐤 Kuş görünüyor";
 
 ctx.drawImage(
 
@@ -807,13 +866,6 @@ sy - 75,
 125
 
 );
-
-}
-
-}else{
-
-log.innerHTML =
-"❌ Kuş görünmüyor";
 
 }
 
