@@ -171,13 +171,6 @@ opacity:0.8;
 
 }
 
-.log{
-
-font-size:18px;
-margin-bottom:10px;
-
-}
-
 </style>
 
 </head>
@@ -213,14 +206,6 @@ muted>
 
 </div>
 
-<div
-class="log"
-id="log">
-
-🐤 Başlatılıyor...
-
-</div>
-
 <script>
 
 const video =
@@ -232,29 +217,31 @@ document.getElementById("canvas");
 const ctx =
 canvas.getContext("2d");
 
-const log =
-document.getElementById("log");
 
 
-
-// KUŞ SESİ
+// ANA KUŞ SESİ
 
 const birdSound =
 new Audio(
 "freesound_community-cardinal-37075.mp3"
 );
 
-birdSound.preload =
-"auto";
-
 birdSound.volume =
 1;
 
 
 
+// RANDOM KUŞ SESİ
+
+const randomBird =
+new Audio(
+"nikin-short-chick-sound-171389.mp3"
+);
+
+randomBird.volume =
+1;
 
 
-// SES AKTİF
 
 document.body.onclick = async ()=>{
 
@@ -266,8 +253,13 @@ birdSound.pause();
 
 birdSound.currentTime = 0;
 
-log.innerHTML =
-"🔊 Ses aktif";
+
+
+await randomBird.play();
+
+randomBird.pause();
+
+randomBird.currentTime = 0;
 
 }catch(e){}
 
@@ -275,27 +267,41 @@ log.innerHTML =
 
 
 
+// RASTGELE ÖTME
+
+setInterval(()=>{
+
+if(Math.random() < 0.5){
+
+randomBird.currentTime = 0;
+
+randomBird.play().catch(()=>{});
+
+}
+
+},15000);
 
 
-// KUŞ FOTO
+
+
+
+// OMUZ KUŞU
 
 const limon =
 new Image();
 
-let kusHazir = false;
-
-
-
-limon.onload = ()=>{
-
-kusHazir = true;
-
-};
-
-
-
 limon.src =
 "28630-removebg-preview.png";
+
+
+
+// UÇAN KUŞ
+
+const flyBird =
+new Image();
+
+flyBird.src =
+"flyBird.png";
 
 
 
@@ -311,8 +317,6 @@ let currentStream;
 
 
 async function startCamera(){
-
-
 
 if(currentStream){
 
@@ -341,14 +345,7 @@ audio:false
 video.srcObject =
 currentStream;
 
-
-
 await video.play();
-
-
-
-log.innerHTML =
-"📸 Kamera açıldı";
 
 }
 
@@ -491,8 +488,6 @@ results.multiFaceLandmarks[0];
 
 
 
-
-
 // YÜZ
 
 const faceCenter =
@@ -534,7 +529,6 @@ faceSize * 0.42,
 faceSize * 0.58,
 
 0,
-
 0,
 Math.PI * 2
 
@@ -543,10 +537,7 @@ Math.PI * 2
 ctx.fill();
 
 
-
-
-
-// YAN ÇİZGİLER
+// YÜZ ÇİZGİLERİ
 
 ctx.strokeStyle =
 "rgba(0,0,0,0.22)";
@@ -605,39 +596,6 @@ fy - faceSize * 0.12 + i * faceSize * 0.03
 ctx.stroke();
 
 }
-
-
-
-
-
-// ALIN ÇİZGİLERİ
-
-for(let i = 0; i < 4; i++){
-
-ctx.beginPath();
-
-ctx.moveTo(
-
-fx - faceSize * 0.12 + i * faceSize * 0.08,
-
-fy - faceSize * 0.42
-
-);
-
-ctx.lineTo(
-
-fx - faceSize * 0.08 + i * faceSize * 0.08,
-
-fy - faceSize * 0.18
-
-);
-
-ctx.stroke();
-
-}
-
-
-
 
 
 // GAGA
@@ -737,7 +695,52 @@ Math.PI*2
 ctx.fill();
 
 
+// YANAK NOKTALARI
 
+ctx.fillStyle =
+"rgba(20,40,120,0.7)";
+
+
+
+// SOL YANAK
+
+ctx.beginPath();
+
+ctx.arc(
+
+fx - faceSize * 0.23,
+
+fy + faceSize * 0.16,
+
+12,
+
+0,
+Math.PI * 2
+
+);
+
+ctx.fill();
+
+
+
+// SAĞ YANAK
+
+ctx.beginPath();
+
+ctx.arc(
+
+fx + faceSize * 0.23,
+
+fy + faceSize * 0.16,
+
+12,
+
+0,
+Math.PI * 2
+
+);
+
+ctx.fill();
 
 
 // GÖZLER
@@ -842,9 +845,7 @@ upperLip.y - lowerLip.y
 
 
 
-
-
-// KUŞ SESİ
+// AĞIZ AÇILINCA ANA SES
 
 if(mouthOpen > 0.03){
 
@@ -853,9 +854,6 @@ if(birdSound.paused){
 birdSound.currentTime = 0;
 
 birdSound.play().catch(()=>{});
-
-log.innerHTML =
-"🐤 Cik cik cik 🔊";
 
 }
 
@@ -875,7 +873,7 @@ birdSound.currentTime = 0;
 
 
 
-// OMUZ KUŞU
+// KUŞ
 
 const shoulder =
 face[454];
@@ -888,21 +886,92 @@ shoulder.y * canvas.height + 85;
 
 
 
-if(kusHazir){
+const cycle =
 
-ctx.drawImage(
+(Date.now() % 20000);
 
-limon,
 
-sx - 40,
-sy - 75,
 
-125,
-125
+let fly = 0;
+let flyY = 0;
+
+
+
+// 20sn'de bir uçuş
+
+if(cycle < 5000){
+
+fly =
+
+Math.sin(cycle/800)
+* 120;
+
+
+
+flyY =
+
+-120 +
+
+Math.cos(cycle/500)
+* 25;
+
+}
+
+
+
+
+
+// TÜYLER
+
+if(cycle < 5000){
+
+for(let i = 0; i < 3; i++){
+
+ctx.fillStyle =
+"rgba(255,255,255,0.8)";
+
+ctx.beginPath();
+
+ctx.ellipse(
+
+sx - 60 + fly - i * 25 + Math.random()*30,
+
+sy + flyY + i * 20 + Math.random()*20,
+
+3,
+8,
+
+Math.sin(Date.now()/300),
+
+0,
+Math.PI * 2
 
 );
 
+ctx.fill();
+
 }
+
+}
+
+
+
+// KUŞ
+
+ctx.drawImage(
+
+cycle < 5000
+? flyBird
+: limon,
+
+sx - 40 + fly,
+
+sy - 75 + flyY,
+
+150,
+110
+
+);
 
 }
 
@@ -928,9 +997,6 @@ a.download =
 "limonchat.png";
 
 a.click();
-
-log.innerHTML =
-"📸 Fotoğraf kaydedildi";
 
 };
 
