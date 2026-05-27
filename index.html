@@ -698,7 +698,40 @@ ny + 5
 
 ctx.lineTo(
 nx,
-ny + 40
+ny + 65
+);
+
+ctx.fill();
+
+
+
+// BURUN DELİKLERİ
+
+ctx.fillStyle =
+"rgba(0,0,0,0.45)";
+
+ctx.beginPath();
+
+ctx.arc(
+nx - 8,
+ny + 1,
+3,
+0,
+Math.PI*2
+);
+
+ctx.fill();
+
+
+
+ctx.beginPath();
+
+ctx.arc(
+nx + 8,
+ny + 1,
+3,
+0,
+Math.PI*2
 );
 
 ctx.fill();
